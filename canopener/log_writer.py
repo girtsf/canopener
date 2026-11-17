@@ -69,16 +69,7 @@ class LogWriter:
             self._rotate()
 
         assert self._file is not None
-        dlc = len(msg.data)
-        id_hex = (
-            f"{msg.arbitration_id:08X}"
-            if msg.is_extended_id
-            else f"{msg.arbitration_id:03X}"
-        )
-        data_hex = " ".join(f"{b:02X}" for b in msg.data)
-        self._file.write(
-            f" ({msg.timestamp:.6f})  {self._interface}  {id_hex}   [{dlc}]  {data_hex}\n"
-        )
+        self._file.write(format_line(msg, self._interface))
 
     def _open_file(self) -> None:
         os.makedirs(self._save_dir, exist_ok=True)
@@ -95,6 +86,23 @@ class LogWriter:
             if self._compress and self._current_path is not None:
                 _bzip(self._current_path)
         self._open_file()
+
+
+def format_line(msg: can.Message, interface: str) -> str:
+    """Format one CAN frame as a ``candump -ta`` log line (with trailing newline).
+
+    Args:
+        msg: CAN message with a valid timestamp.
+        interface: CAN interface name written into the line.
+    """
+    dlc = len(msg.data)
+    id_hex = (
+        f"{msg.arbitration_id:08X}"
+        if msg.is_extended_id
+        else f"{msg.arbitration_id:03X}"
+    )
+    data_hex = " ".join(f"{b:02X}" for b in msg.data)
+    return f" ({msg.timestamp:.6f})  {interface}  {id_hex}   [{dlc}]  {data_hex}\n"
 
 
 def _bzip(path: str) -> None:
