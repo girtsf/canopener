@@ -3,11 +3,12 @@
 ## Entry point
 
 - `canopener` → `canopener/cli.py:cli` — click group with top-level subcommands
-  `sniff`, `decode-candump`, `watch`, `ping`, `sdo-read`, `sdo-write`, `nmt-reset`,
-  `dump-pdo`, `home`, `limp`, `pvt-move`. The node-targeting commands (`ping`,
-  `sdo-read`, `sdo-write`, `nmt-reset`, `dump-pdo`, `home`, `limp`, `pvt-move`)
-  share `--interface` and `--node-id` via the `node_options` decorator; `sniff`,
-  `decode-candump`, and `watch` define their own options.
+  `sniff`, `decode-candump`, `pcap2candump`, `watch`, `ping`, `sdo-read`,
+  `sdo-write`, `nmt-reset`, `dump-pdo`, `home`, `limp`, `pvt-move`. The
+  node-targeting commands (`ping`, `sdo-read`, `sdo-write`, `nmt-reset`,
+  `dump-pdo`, `home`, `limp`, `pvt-move`) share `--interface` and `--node-id`
+  via the `node_options` decorator; `sniff`, `decode-candump`, `pcap2candump`,
+  and `watch` define their own options.
 
 ## Key modules
 
@@ -71,6 +72,9 @@
 - `canopener/sinks.py` — pluggable log sinks for `watch`: `LogSink` protocol, `SinkBus`
   fan-out, `CsvSink` (adapter over `CsvLogger`), `FoxgloveSink` (lazily imports the
   optional `foxglove` extra; only constructed when `--foxglove-port` is set).
+- `canopener/pcap2candump.py` — `read_pcap(path)` iterator + `convert(...)`: converts
+  classic pcap captures of SocketCAN traffic (Linux SLL v1 from `tcpdump -i any`,
+  dropping tx-queue duplicates, or raw SocketCAN link type) to `candump -ta` logs.
 - `canopener/capture.py` — `LiveCapture`: live SocketCAN frame capture (iterator) via `can`.
 - `canopener/log_writer.py` — `LogWriter`: rotating frame logger in `candump -ta` format,
   with optional bz2 compression.

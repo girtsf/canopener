@@ -10,6 +10,7 @@ import click
 from loguru import logger
 
 from canopener import canopen_utils
+from canopener import pcap2candump
 from canopener import pvt_demo
 from canopener import sniffer
 from canopener import watcher
@@ -124,6 +125,35 @@ def decode_candump(
 ) -> None:
     """Decode a candump log file offline."""
     sniffer.decode_candump(candump_path, eds, pdo_config)
+
+
+@cli.command("pcap2candump")
+@click.argument(
+    "pcap_path",
+    type=click.Path(exists=True, dir_okay=False),
+    metavar="PCAP",
+)
+@click.option(
+    "-o",
+    "--output",
+    default=None,
+    type=click.Path(dir_okay=False),
+    help="Output log file.  [default: PCAP with .log suffix]",
+)
+@click.option(
+    "--interface",
+    default="can0",
+    show_default=True,
+    help="Interface name written into each log line.",
+)
+def pcap2candump_cmd(pcap_path: str, output: str | None, interface: str) -> None:
+    """Convert a pcap capture of SocketCAN traffic to candump -ta format.
+
+    Accepts classic pcap files with Linux SLL v1 ("tcpdump -i any"; tx-queue
+    duplicates of frames sent by the capturing host are dropped) or raw
+    SocketCAN ("tcpdump -i can0") link types.
+    """
+    pcap2candump.convert(pcap_path, output, interface)
 
 
 @cli.command("watch")
