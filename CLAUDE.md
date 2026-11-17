@@ -4,11 +4,11 @@
 
 - `canopener` → `canopener/cli.py:cli` — click group with top-level subcommands
   `sniff`, `decode-candump`, `pcap2candump`, `watch`, `ping`, `sdo-read`,
-  `sdo-write`, `nmt-reset`, `dump-pdo`, `home`, `limp`, `pvt-move`. The
-  node-targeting commands (`ping`, `sdo-read`, `sdo-write`, `nmt-reset`,
-  `dump-pdo`, `home`, `limp`, `pvt-move`) share `--interface` and `--node-id`
-  via the `node_options` decorator; `sniff`, `decode-candump`, `pcap2candump`,
-  and `watch` define their own options.
+  `sdo-read-all`, `sdo-write`, `nmt-reset`, `dump-pdo`, `home`, `limp`,
+  `pvt-move`. The node-targeting commands (`ping`, `sdo-read`, `sdo-read-all`,
+  `sdo-write`, `nmt-reset`, `dump-pdo`, `home`, `limp`, `pvt-move`) share
+  `--interface` and `--node-id` via the `node_options` decorator; `sniff`,
+  `decode-candump`, `pcap2candump`, and `watch` define their own options.
 
 ## Key modules
 
@@ -19,7 +19,9 @@
   `pdo_mapping.PdoMappingTracker`. Two high-level entrypoints called from `cli.py`:
   `run(...)` for live SocketCAN capture and `decode_candump(...)` for offline replay.
 - `canopener/canopen_utils.py` — non-PVT runners called from cli.py: `ping`, `sdo_read`,
-  `sdo_write`, `nmt_reset`, `dump_pdo`, `home`, `limp`. Also hosts shared helpers used
+  `sdo_read_all` (reads every readable EDS variable; aborts and EDS/device size
+  mismatches are printed, not fatal), `sdo_write`, `nmt_reset`, `dump_pdo`, `home`,
+  `limp`. Also hosts shared helpers used
   by `pvt_demo`:
   - `_sdo`, `_sdo_read` — SDO access primitives
   - `_wait_status(node, mask, expected, ..., index, subindex)` — polls any OD word

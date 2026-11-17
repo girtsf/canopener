@@ -260,6 +260,27 @@ def sdo_read(
     canopen_utils.sdo_read(interface, node_id, index, subindex, timeout, eds_path)
 
 
+@cli.command("sdo-read-all")
+@node_options
+@click.option(
+    "--timeout",
+    default=1.0,
+    show_default=True,
+    type=float,
+    help="SDO response timeout in seconds.",
+)
+@click.option(
+    "--eds",
+    "eds_path",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="EDS file listing the objects to read.",
+)
+def sdo_read_all(interface: str, node_id: int, timeout: float, eds_path: str) -> None:
+    """Read and print every readable object listed in the EDS file."""
+    canopen_utils.sdo_read_all(interface, node_id, timeout, eds_path)
+
+
 @cli.command("sdo-write")
 @node_options
 @click.argument("index", type=str, metavar="INDEX")

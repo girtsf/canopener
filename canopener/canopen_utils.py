@@ -8,6 +8,7 @@ CiA 402 enable sequence) used by both these utilities and
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import threading
 import time
 
@@ -414,6 +415,91 @@ def sdo_write(
         )
     finally:
         network.disconnect()
+
+
+def _od_variables(
+    od: canopen.ObjectDictionary,
+) -> Iterator[tuple[str, canopen.objectdictionary.ODVariable]]:
+    """Yield ``(display name, variable)`` for every variable in *od*.
+
+    Variables are yielded in index/subindex order.  Sub-variables of
+    records/arrays are named ``"<object>.<sub>"``.
+
+    Args:
+        od: Object dictionary to walk.
+    """
+    for obj in od.values():
+        if isinstance(obj, canopen.objectdictionary.ODVariable):
+            yield obj.name, obj
+        else:
+            for sub in obj.values():
+                yield f"{obj.name}.{sub.name}", sub
+
+
+def _format_od_value(var: canopen.objectdictionary.ODVariable, data: bytes) -> str:
+    """Format raw SDO upload bytes according to the variable's datatype.
+
+    Integers are shown as zero-padded hex of the raw bytes plus the decoded
+    decimal value; strings are quoted; domains are shown as hex bytes.  A
+    built-in CiA 402 annotation is appended where available.  If the device
+    returns a different size than the EDS datatype, the raw bytes are shown
+    with a note (EDS files often declare arrays/records as plain variables).
+
+    Args:
+        var: Object dictionary variable describing the datatype.
+        data: Raw little-endian bytes from the SDO upload.
+    """
+    try:
+        value = var.decode_raw(data)
+    except canopen.objectdictionary.ObjectDictionaryError as e:
+        return f"[{data.hex(' ')}]  ({e})"
+    if isinstance(value, bool):
+        text = str(value)
+    elif isinstance(value, int):
+        raw_u = int.from_bytes(data, "little")
+        text = f"0x{raw_u:0{len(data) * 2}X} ({value})"
+    elif isinstance(value, float):
+        text = f"{value:g}"
+    elif isinstance(value, str):
+        text = repr(value)
+    else:
+        text = f"[{bytes(value).hex(' ')}]"
+    annotation = decode.annotate_by_index(var.index, var.subindex, data)
+    return f"{text}  [{annotation}]" if annotation else text
+
+
+def sdo_read_all(interface: str, node_id: int, timeout: float, eds_path: str) -> None:
+    """Read every readable variable in the EDS object dictionary and print it.
+
+    Each line shows ``index.subindex``, the object name, and the decoded
+    value.  Write-only entries are listed but not read; SDO aborts (e.g. an
+    object the device does not implement) are printed and the dump continues.
+    """
+    network = canopen.Network()
+    network.connect(channel=interface, bustype="socketcan")
+    try:
+        node: canopen.RemoteNode = network.add_node(node_id, eds_path)
+        node.sdo.RESPONSE_TIMEOUT = timeout
+        entries = list(_od_variables(node.object_dictionary))
+        name_width = min(max((len(name) for name, _ in entries), default=0), 60)
+        n_read = n_abort = n_skip = 0
+        for name, var in entries:
+            prefix = f"0x{var.index:04X}.{var.subindex:02X}  {name:<{name_width}}  "
+            if not var.readable:
+                click.echo(f"{prefix}(write-only)")
+                n_skip += 1
+                continue
+            try:
+                data = bytes(node.sdo.upload(var.index, var.subindex))
+            except SdoAbortedError as e:
+                click.echo(f"{prefix}abort: {e}")
+                n_abort += 1
+                continue
+            click.echo(f"{prefix}{_format_od_value(var, data)}")
+            n_read += 1
+    finally:
+        network.disconnect()
+    click.echo(f"\n{n_read} read, {n_abort} aborted, {n_skip} write-only")
 
 
 def nmt_reset(interface: str, node_id: int) -> None:
